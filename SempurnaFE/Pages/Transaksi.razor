@@ -1,0 +1,132 @@
+﻿@page "/transaksi"
+@using SempurnaFE.Models
+@inject HttpClient Http
+
+<style>
+    .filter-container {
+        display: flex;
+        align-items: flex-end;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .filter-item label {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+    .form-control {
+        padding: 6px 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 0.9rem;
+    }
+
+    .btn-filter {
+        background-color: #007bff;
+        color: white;
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+        .btn-filter:hover {
+            background-color: #0056b3;
+        }
+</style>
+
+
+
+<h3>Transaksi</h3>
+
+<div class="filter-container">
+    <div class="filter-item">
+        <input type="text" @bind="AccountNumber" placeholder="Nomor Rekening" />
+    </div>
+    <div class="filter-item">
+        <label>Dari: <input type="date" @bind="StartDate" /></label>
+    </div>
+    <div class="filter-item">
+        <label>Sampai: <input type="date" @bind="EndDate" /></label>
+    </div>
+    <button @onclick="GetTransactions">Tampilkan</button>
+
+</div>
+
+
+
+@if (Transactions != null)
+{
+    <table class="table-transaksi">
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>Jenis</th>
+                <th>Jumlah</th>
+                <th>Saldo</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tx in FilteredTransactions)
+            {
+                <tr class="@(tx.TransactionType == "Withdrawal" && tx.IsFailedWithdrawal ? "bg-danger text-white" : "")">
+                    <td>@tx.TransactionDate.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>@tx.TransactionType</td>
+                    <td>@tx.Amount</td>
+                    <td>@tx.Balance</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>Belum ada transaksi ditemukan.</p>
+}
+
+
+@code {
+    private string AccountNumber = "";
+    private DateTime? StartDate;
+    private DateTime? EndDate;
+    private List<TransactionDTO> Transactions = new();
+    private List<TransactionDTO> FilteredTransactions = new();
+
+    private async Task GetTransactions()
+    {
+        if (string.IsNullOrWhiteSpace(AccountNumber))
+            return;
+
+        var response = await Http.GetFromJsonAsync<List<TransactionDTO>>($"api/transactions/{AccountNumber}");
+        if (response != null)
+        {
+            Transactions = response;
+            ApplyFilter();
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        FilteredTransactions = Transactions
+            .Where(tx =>
+                (!StartDate.HasValue || tx.TransactionDate.Date >= StartDate.Value.Date) &&
+                (!EndDate.HasValue || tx.TransactionDate.Date <= EndDate.Value.Date))
+            .ToList();
+
+
+    }
+
+
+}
+
+
